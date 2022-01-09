@@ -1,5 +1,4 @@
-# Currently the 5183 code.  The 5184 uses a two line method. See the ATC_MI driver for methodology.
-# Tested as is - and it will pick up data and send.  Formatting is wrong as well but prelimnary works.
+# The 5184 uses a two line method. Probe1/2 are published in one packet.  Probe3/4 in another.  Not always sequential
 def handle_GVH5184(value, trigger, msg)
   if trigger == details_trigger
     var this_device = device_config[value['mac']]
@@ -20,8 +19,6 @@ def handle_GVH5184(value, trigger, msg)
           var this_full_data = this_device['last_p']
           var seq_index = 0 # Default sequence will be #1 - modify with if statement if sequence 2
           var j = 1 # Default counter start
-          #
-          #
           # Test to see if last_full_data is empty - need to create this_full_data & last_full_data
           if last_full_data == bytes('')
             last_full_data = [0, -1, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0]
