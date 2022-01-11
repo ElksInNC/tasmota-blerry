@@ -88,11 +88,11 @@ def handle_GVH5184(value, trigger, msg)
           for k:j-1 .. j
             var probeset
             # Determin what probe states/temps and create list for publishing
-            if (this_full_data[j][3+((k-j)*3)] & 0x40 >> 6) # This is the alarm branch
+            if (this_full_data[j][3+((k-j)*3)] & 0x40) >> 6 # This is the alarm branch
               probeset = ['ON', 'ON']              
-            elif (this_full_data[j][3+((k-j)*3)] & 0x04 >> 2) # This is the normal branch
+            elif (this_full_data[j][3+((k-j)*3)] & 0x80) >> 7 # This is the normal branch
               probeset = ['ON', 'OFF']              
-            elif (this_full_data[j][3+((k-j)*3)] & 0x08 >> 3) # This is the unplugged branch.
+            elif (~this_full_data[j][3+((k-j)*3)] & 0x80) >> 7 # This is the unplugged branch.
               probeset = ['OFF', 'OFF']
             else                                       # This should never happen but...
               probeset = ['unavailable', 'unavailable']
