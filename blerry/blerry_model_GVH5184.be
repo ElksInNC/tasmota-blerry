@@ -86,29 +86,26 @@ def handle_GVH5184(value, trigger, msg)
         for j:1 .. 2
           # Inner loop - which probe - note (k-j)==-1 is Probe[a] and (k-j)==0 is Probe[b]
           for k:j-1 .. j
-            var probeset
-            # Determin what probe states/temps and create list for publishing                    
-            if (this_full_data[j][3+((k-j)*3)] & 0x80) >> 7 # This is the normal branch
-              probeset = ['ON', 'OFF']              
-            else
-              probeset = ['OFF', 'OFF']
+            var probeset = ['OFF', 'OFF']
+            var status = this_full_data[j][3+((k-j)*3)]
+            var probetemp = this_full_data[j][4+((k-j)*3)]
+            var setpoint = this_full_data[j][5+((k-j)*3)]
+            if (status & 0x80) >> 7
+              probeset[0] = 'ON'              
             end
-            if (this_full_data[j][3+((k-j)*3)] & 0x40) >> 6  #Alarm
-              probeset[1] = ['ON']
+            if (status & 0x40) >> 6
+              probeset[1] = 'ON'
             end
-            # Add the current temp to the list - position 1 or 4
-            if this_full_data[j][4+((k-j)*3)]==65535
+            if probetemp==0xFFFF
               probeset = probeset .. 'unavailable'
             else
-              probeset = probeset .. round(this_full_data[j][4+((k-j)*3)]/100.0, this_device['temp_precision'])
+              probeset = probeset .. round(probetemp/100.0, this_device['temp_precision'])
             end           
-            # Add the setpoint to the list - position 2 or 5
-            if this_full_data[j][5+((k-j)*3)]==65535
+            if setpoint==0xFFFF
               probeset = probeset .. 'unavailable'
             else
-              probeset = probeset .. round(this_full_data[j][5+((k-j)*3)]/100.0, this_device['temp_precision'])
+              probeset = probeset .. round(setpoint/100.0, this_device['temp_precision'])
             end
-            print(probeset)
             output_map['Temperature_'+str(j+k)+'_Status'] = probeset[0]
             output_map['Temperature_'+str(j+k)+'_Alarm'] = probeset[1]
             output_map['Temperature_'+str(j+k)] = probeset[2]
