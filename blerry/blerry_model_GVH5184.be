@@ -87,15 +87,14 @@ def handle_GVH5184(value, trigger, msg)
           # Inner loop - which probe - note (k-j)==-1 is Probe[a] and (k-j)==0 is Probe[b]
           for k:j-1 .. j
             var probeset
-            # Determin what probe states/temps and create list for publishing
-            if (this_full_data[j][3+((k-j)*3)] & 0x40) >> 6 # This is the alarm branch
-              probeset = ['ON', 'ON']              
-            elif (this_full_data[j][3+((k-j)*3)] & 0x80) >> 7 # This is the normal branch
+            # Determin what probe states/temps and create list for publishing                    
+            if (this_full_data[j][3+((k-j)*3)] & 0x80) >> 7 # This is the normal branch
               probeset = ['ON', 'OFF']              
-            elif (~this_full_data[j][3+((k-j)*3)] & 0x80) >> 7 # This is the unplugged branch.
+            else
               probeset = ['OFF', 'OFF']
-            else                                       # This should never happen but...
-              probeset = ['unavailable', 'unavailable']
+            end
+            if (this_full_data[j][3+((k-j)*3)] & 0x40) >> 6  #Alarm
+              probeset[1] = ['ON']
             end
             # Add the current temp to the list - position 1 or 4
             if this_full_data[j][4+((k-j)*3)]==65535
