@@ -387,7 +387,7 @@ class Blerry_Device
       'ThermoPro_TP59'  : 'blerry_driver_ThermoPro_TP59.be',
       # 'GVH5182'         : 'blerry_driver_GVH5182.be',
       # 'GVH5183'         : 'blerry_driver_GVH5183.be',
-      # 'GVH5184'         : 'blerry_driver_GVH5184.be',
+      'GVH5184'         : 'blerry_driver_GVH5184.be',
       # 'ATCmi'           : 'blerry_driver_ATCmi.be',
       # 'WoSensorTH'      : 'blerry_driver_WoSensorTH.be',
       # 'WoContact'       : 'blerry_driver_WoContact.be',
@@ -813,11 +813,4 @@ end
 
 blerry = Blerry()
 blerry_driver = Blerry_Driver(blerry)
-tasmota.add_driver(blerry_driver)
-tasmota.add_cmd("BlerrySetDevice", blerry_helpers.cmd_set_device)
-tasmota.add_cmd("BlerryGetDevice", blerry_helpers.cmd_get_device)
-tasmota.add_cmd("BlerryDelDevice", blerry_helpers.cmd_del_device)
-tasmota.add_cmd("BlerryGetConfig", blerry_helpers.cmd_get_config)
-tasmota.add_cmd("BlerrySetConfig", blerry_helpers.cmd_set_config)
-tasmota.add_cmd("BlerryDelConfig", blerry_helpers.cmd_del_config)
 blerry.load_success()
