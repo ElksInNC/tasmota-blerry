@@ -32,11 +32,11 @@ def blerry_handle(device, advert)
       print('pstat-pre: ',pstat)
       print('gvh5184-3')
       var palrm = blerry_helpers.bitval(data.get((9+f),-1),6) # Probe alarming bit
-      print('palrm-pre: ',pstat)
+      print('palrm-pre: ',palrm)
       var pt = data.get((10+f),-2) #current bank probe temp 
-      print('pt-pre: ',pstat)
+      print('pt-pre: ',pt)
       var pset = data.get((12+f),-2) #current bank setppoint
-      print('pset-pre: ',pstat)
+      print('pset-pre: ',pset)
       print('gvh5184-4')
 
       # Convert pstat and palrm bits to text for HA devclas binary sensor type
