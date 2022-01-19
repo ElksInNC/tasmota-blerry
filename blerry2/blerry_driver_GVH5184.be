@@ -82,5 +82,5 @@ def blerry_handle(device, advert)
     return false
   end
 end
-blerry_active = true
+blerry_active = false
 print('BLR: Driver: GVH5184 Loaded')
