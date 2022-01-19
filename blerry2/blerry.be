@@ -15,10 +15,7 @@ var blerry_version = 'v0.2.0-dev'
       # 'GVH5182'   : 'blerry_driver_GVH5182.be',
       # 'GVH5183'   : 'blerry_driver_GVH5183.be',
       # 'GVH5184'   : 'blerry_driver_GVH5184.be',
-      # 'ATCmi'     : 'blerry_driver_ATCmi.be',
-      # 'WoSensorTH': 'blerry_driver_WoSensorTH.be',
       # 'WoContact' : 'blerry_driver_WoContact.be',
-      # 'WoPresence': 'blerry_driver_WoPresence.be',
 
 #######################################################################
 # Module Imports
@@ -93,58 +90,61 @@ class blerry_helpers
     return n
   end
 
-  static def cmd_set_device(cmd, idx, payload, payload_json)
-    var f = open("blerry_config.json", "r")
-    var config = json.load(f.read())
+  static def read_config()
+    var config
+    if path.exists("blerry_config.json")
+      var f = open("blerry_config.json", "r")
+      config = json.load(f.read())
+      f.close()
+    else
+      config = {'devices':{}}
+      blerry_helpers.write_config(config)
+    end
+    return config
+  end
+
+  static def write_config(config)
+    var f = open("blerry_config.json", "w")
+    f.write(json.dump(config))
     f.close()
+  end
+
+  static def cmd_set_device(cmd, idx, payload, payload_json)
+    var config = blerry_helpers.read_config()
     var new_dev = json.load(payload)
     for m:new_dev.keys()
       config['devices'][m] = new_dev[m]
     end
-    f = open("blerry_config.json", "w")
-    f.write(json.dump(config))
-    f.close()
+    blerry_helpers.write_config(config)
     tasmota.resp_cmnd_done()
   end
 
   static def cmd_get_device(cmd, idx, payload, payload_json)
-    var f = open("blerry_config.json", "r")
-    var config = json.load(f.read())
-    f.close()
-    tasmota.resp_cmnd_str(json.dump({payload: config['devices'][payload]}))
+    var config = blerry_helpers.read_config()
+    tasmota.resp_cmnd(json.dump({payload: config['devices'][blerry_helpers.string_upper(payload)]}))
   end
   
   static def cmd_del_device(cmd, idx, payload, payload_json)
-    var f = open("blerry_config.json", "r")
-    var config = json.load(f.read())
-    f.close()
+    var config = blerry_helpers.read_config()
     var new_dev = json.load(payload)
     config['devices'].remove(payload)
-    f = open("blerry_config.json", "w")
-    f.write(json.dump(config))
-    f.close()
+    blerry_helpers.write_config(config)
     tasmota.resp_cmnd_done()
   end
 
   static def cmd_set_config(cmd, idx, payload, payload_json)
     var config = json.load(payload)
-    var f = open("blerry_config.json", "w")
-    f.write(json.dump(config))
-    f.close()
+    blerry_helpers.write_config(config)
     tasmota.resp_cmnd_done()
   end
 
   static def cmd_get_config(cmd, idx, payload, payload_json)
-    var f = open("blerry_config.json", "r")
-    var config = json.load(f.read())
-    f.close()
-    tasmota.resp_cmnd_str(json.dump(config))
+    var config = blerry_helpers.read_config()
+    tasmota.resp_cmnd(json.dump(config))
   end
 
   static def cmd_del_config(cmd, idx, payload, payload_json)
-    var f = open("blerry_config.json", "w")
-    f.write(json.dump({'devices':{}}))
-    f.close()
+    blerry_helpers.write_config({'devices':{}})
     tasmota.resp_cmnd_done()
   end
 
@@ -153,7 +153,7 @@ class blerry_helpers
     cl.begin(url)
     var r = cl.GET()
     if r != 200
-      print('error')
+      print('BLY: Could not download file:', file_name, 'from:', url)
       return false
     end
     var s = cl.get_string()
@@ -165,17 +165,17 @@ class blerry_helpers
   end
 
   static def download_driver(driver_fname)
-    var url = 'https://raw.githubusercontent.com/tony-fav/tasmota-blerry/dev-blerry2/blerry2/' + driver_fname
+    var url = 'https://raw.githubusercontent.com/tony-fav/tasmota-blerry/dev/blerry/drivers/' + driver_fname
     return blerry_helpers.download_file(driver_fname, url)
   end
 
   static def ensure_driver_exists(driver_fname)
     if !path.exists(driver_fname)
       if blerry_helpers.download_driver(driver_fname)
-        print('downloaded driver successfully', driver_fname)
+        print('BLY: Downloaded driver successfully:', driver_fname)
         return true
       else
-        print('could not download driver automatically', driver_fname)
+        print('BLY: Could not download driver:', driver_fname)
         return false
       end
     end
@@ -321,6 +321,22 @@ class Blerry_Binary_Sensor
     end
     self.dev_cla = dev_cla
   end
+
+  def compare(in_value) # todo: improve
+    if in_value
+      if self.value == 'ON'
+        return true
+      else
+        return false
+      end
+    else
+      if self.value == 'OFF'
+        return true
+      else
+        return false
+      end
+    end
+  end
 end
 
 #######################################################################
@@ -340,6 +356,7 @@ class Blerry_Device
   var binary_sensors_to_discover
   var topic
   var publish_available
+  var next_forced_publish
 
   def init(mac, config, blerry_inst)
     self.mac = mac
@@ -359,6 +376,7 @@ class Blerry_Device
     self.add_attribute('Model', self.config['model'])
 
     # publication related
+    self.next_forced_publish = tasmota.millis(300000)
     self.publish_available = false
     self.topic = self.config['base_topic']
     if self.topic[-1] != '/'
@@ -385,16 +403,15 @@ class Blerry_Device
       'ATCmi'           : 'blerry_driver_Xiaomi.be',
       'Xiaomi_LYWSDCGQ' : 'blerry_driver_Xiaomi.be',
       'ThermoPro_TP59'  : 'blerry_driver_ThermoPro_TP59.be',
+      'WoContact'       : 'blerry_driver_WoContact.be',
+      'WoPresence'      : 'blerry_driver_WoPresence.be',
+      'WoSensorTH'      : 'blerry_driver_WoSensorTH.be',
       # 'GVH5182'         : 'blerry_driver_GVH5182.be',
       # 'GVH5183'         : 'blerry_driver_GVH5183.be',
       'GVH5184'         : 'blerry_driver_GVH5184.be',
-      # 'ATCmi'           : 'blerry_driver_ATCmi.be',
-      # 'WoSensorTH'      : 'blerry_driver_WoSensorTH.be',
-      # 'WoContact'       : 'blerry_driver_WoContact.be',
-      # 'WoPresence'      : 'blerry_driver_WoPresence.be',
     }
     var fn = model_drivers[self.config['model']]    
-    blerry_handle = def () print('BLY: Driver did not load properly') end
+    blerry_handle = def () print('BLY: Driver did not load properly:', self.config['model']) end
     blerry_active = false
     blerry_helpers.ensure_driver_exists(fn)
     load(fn)
@@ -404,6 +421,14 @@ class Blerry_Device
 
   def add_attribute(name, value)
     self.attributes[name] = Blerry_Attribute(name, value)
+  end
+
+  def get_attribute(name)
+    if self.attributes.contains(name)
+      return self.attributes[name]
+    else
+      return nil
+    end
   end
 
   def add_sensor_no_pub(name, value, dev_cla, unit_of_meas)
@@ -436,7 +461,7 @@ class Blerry_Device
       self.binary_sensors[name] = Blerry_Binary_Sensor(name, value, dev_cla)
       self.binary_sensors_to_discover.push(name)
       self.publish_available = true
-    elif self.binary_sensors[name].value != value
+    elif !self.binary_sensors[name].compare(value)
       self.binary_sensors[name] = Blerry_Binary_Sensor(name, value, dev_cla)
       self.publish_available = true
     end
@@ -444,6 +469,7 @@ class Blerry_Device
 
   def publish()
     if self.publish_available
+      self.next_forced_publish = tasmota.millis(300000)
       var msg = {}
       for a:self.attributes
         msg[a.name] = a.value
@@ -736,6 +762,9 @@ class Blerry
       handle_f(device, advert)
       device.add_attribute('Time', tasmota.time_str(tasmota.rtc()['local']))
       device.add_sensor_no_pub('RSSI', value['RSSI'], 'signal_strength', 'dB')
+      if tasmota.millis() > device.next_forced_publish
+        device.publish_available = true
+      end
     except .. as e, m
       print('BLY: tried to handle mac =', value['mac'], 'with alias =', value['a'])
       raise e, m
@@ -813,4 +842,11 @@ end
 
 blerry = Blerry()
 blerry_driver = Blerry_Driver(blerry)
+tasmota.add_driver(blerry_driver)
+tasmota.add_cmd("BlerrySetDevice", blerry_helpers.cmd_set_device)
+tasmota.add_cmd("BlerryGetDevice", blerry_helpers.cmd_get_device)
+tasmota.add_cmd("BlerryDelDevice", blerry_helpers.cmd_del_device)
+tasmota.add_cmd("BlerryGetConfig", blerry_helpers.cmd_get_config)
+tasmota.add_cmd("BlerrySetConfig", blerry_helpers.cmd_set_config)
+tasmota.add_cmd("BlerryDelConfig", blerry_helpers.cmd_del_config)
 blerry.load_success()
