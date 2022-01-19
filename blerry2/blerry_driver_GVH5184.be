@@ -58,7 +58,7 @@ def blerry_handle(device, advert)
 
       #Set temps unless 0xFFFF - then set 'unavailable'
       if pt==0xFFFF 
-        pt='unavailabe' 
+        pt='unavailable' 
       else
         pt=pt/100
       end
@@ -67,7 +67,7 @@ def blerry_handle(device, advert)
       print('gvh5184-6')
       
       if pset==0xFFFF 
-        pset='unavailabe' 
+        pset='unavailable' 
       else
         pset=pset/100
       end
