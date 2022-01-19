@@ -6,7 +6,8 @@ def blerry_handle(device, advert)
     var b = (data[7] & 0x7F) #Battery% - Bit 8 not used
     var pa = 1 #Label for Probe A
     var pb = 2 #Label for Probe B
-   
+    print('gvh5184-1')
+
     #Change to Probe3&4 if sequence is 2
     if sq == 2
       pa = 3
@@ -17,16 +18,27 @@ def blerry_handle(device, advert)
     #Add/upadte sensors
     #Battery is present in Seq1&2 but only as single value. Do it first
     device.add_sensor('Battery', b, 'battery', '%')
+    print('gvh5184-2')
  
     # Loop through ProbeA & B
     for j:pa..pb
+      print("j: ",j)
       var e = (j+1)%2 #convert probe numbers - odd > 0 and even to 1
-      var f = (b*5) #offset - are we in bank A or B
-      var pstat = bitval(get.data[9+f],7) # Probe inserted bit
-      var palrm = bitval(get.data[9+f],6) # Probe alarming bit
-      var pt = get.data[(10+f),-2] #current bank probe temp 
-      var pset get.data[(12+f),-2] #current bank setppoint
-      
+      print("e: ",e)
+      var f = (e*5) #offset - are we in bank A or B
+      print("f: ",f)
+      print('gvh5184-3')
+      var pstat = blerry_helpers.bitval(data.get((9+f),-1),7) # Probe inserted bit
+      print('pstat-pre: ',pstat)
+      print('gvh5184-3')
+      var palrm = blerry_helpers.bitval(data.get((9+f),-1),6) # Probe alarming bit
+      print('palrm-pre: ',pstat)
+      var pt = data.get((10+f),-2) #current bank probe temp 
+      print('pt-pre: ',pstat)
+      var pset = data.get((12+f),-2) #current bank setppoint
+      print('pset-pre: ',pstat)
+      print('gvh5184-4')
+
       # Convert pstat and palrm bits to text for HA devclas binary sensor type
       if pstat 
         pstat='ON' 
@@ -38,7 +50,10 @@ def blerry_handle(device, advert)
       else
         palrm='OFF'
       end
+      print('gvh5184-5')
+      print('pstat: ',pstat)
       device.add_binary_sensor('Probe'+str(j)+'_Status'	, pstat, 'plug')
+      print('palarm: ',palrm)
       device.add_binary_sensor('Probe'+str(j)+'_Alarm'	, palrm, 'heat')
 
       #Set temps unless 0xFFFF - then set 'unavailable'
@@ -47,16 +62,22 @@ def blerry_handle(device, advert)
       else
         pt=pt/100
       end
-      device.add_sensor('Probe_'+str(j)+'_Temp', t,  'temperature', '°C')
-
+      print('pt: ',pt)
+      device.add_sensor('Probe_'+str(j)+'_Temp', pt,  'temperature', '°C')
+      print('gvh5184-6')
+      
       if pset==0xFFFF 
         pset='unavailabe' 
       else
-        pset=pt/100
+        pset=pset/100
       end
-      device.add_sensor('Probe_'+str(j)+'_Target', t,  'temperature', '°C')
+      print('pset: ',pset)
+      device.add_sensor('Probe_'+str(j)+'_Target', pset,  'temperature', '°C')
+      print('gvh5184-7')
+
     end
     return true
+    print('gvh5184-8')
   else
     return false
   end
