@@ -52,9 +52,9 @@ def blerry_handle(device, advert)
       end
       print('gvh5184-5')
       print('pstat: ',pstat)
-      device.add_binary_sensor('Probe'+str(j)+'_Status'	, pstat, 'plug')
+      device.add_binary_sensor('Probe_'+str(j)+'_Status'	, pstat, 'plug')
       print('palarm: ',palrm)
-      device.add_binary_sensor('Probe'+str(j)+'_Alarm'	, palrm, 'heat')
+      device.add_binary_sensor('Probe_'+str(j)+'_Alarm'	, palrm, 'heat')
 
       #Set temps unless 0xFFFF - then set 'unavailable'
       if pt==0xFFFF 
