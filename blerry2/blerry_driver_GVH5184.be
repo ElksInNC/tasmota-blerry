@@ -2,82 +2,39 @@ def blerry_handle(device, advert)
   var elements = advert.get_elements_by_type_length(0xFF, 0x14)
   if size(elements)
     var data = elements[0].data
-    var sq = data[8] # Sequence Number 1 or 2
-    var b = (data[7] & 0x7F) #Battery% - Bit 8 not used
-    var pa = 1 #Label for Probe A
-    var pb = 2 #Label for Probe B
-    print('gvh5184-1')
 
-    #Change to Probe3&4 if sequence is 2
-    if sq == 2
-      pa = 3
-      pb = 4
+    # Probes 1 & 2 or 3 & 4
+    var probe_labels = ['_1_', '_2_']
+    if data[8] == 2
+      probe_labels = ['_3_', '_4_']
     end
     
-
-    #Add/upadte sensors
-    #Battery is present in Seq1&2 but only as single value. Do it first
-    device.add_sensor('Battery', b, 'battery', '%')
-    print('gvh5184-2')
+    device.add_sensor('Battery', (data[7] & 0x7F), 'battery', '%')
  
-    # Loop through ProbeA & B
-    for j:pa..pb
-      print("j: ",j)
-      var e = (j+1)%2 #convert probe numbers - odd > 0 and even to 1
-      print("e: ",e)
-      var f = (e*5) #offset - are we in bank A or B
-      print("f: ",f)
-      print('gvh5184-3')
-      var pstat = blerry_helpers.bitval(data.get((9+f),-1),7) # Probe inserted bit
-      print('pstat-pre: ',pstat)
-      print('gvh5184-3')
-      var palrm = blerry_helpers.bitval(data.get((9+f),-1),6) # Probe alarming bit
-      print('palrm-pre: ',palrm)
-      var pt = data.get((10+f),-2) #current bank probe temp 
-      print('pt-pre: ',pt)
-      var pset = data.get((12+f),-2) #current bank setppoint
-      print('pset-pre: ',pset)
-      print('gvh5184-4')
+    # Loop through Probe A & B
+    for probe_idx:0..1
+      var probe_label = probe_labels[probe_idx]
+      var offset = 5*probe_idx
+      device.add_binary_sensor('Probe' + probe_label + 'Status', blerry_helpers.bitval(data[offset + 9], 7), 'plug') # Probe Inserted Bit
+      device.add_binary_sensor('Probe' + probe_label + 'Alarm',  blerry_helpers.bitval(data[offset + 9], 6), 'heat') # Probe Alarming Bit
 
-      # Convert pstat and palrm bits to text for HA devclas binary sensor type
-      if pstat 
-        pstat='ON' 
-      else 
-        pstat='OFF'
-      end
-      if palrm
-        palrm='ON' 
+      var probe_t = data.get(offset + 10, -2)
+      if probe_t == 0xFFFF
+        probe_t = 'unavailable'
       else
-        palrm='OFF'
+        probe_t = probe_t/100.0
       end
-      print('gvh5184-5')
-      print('pstat: ',pstat)
-      device.add_binary_sensor('Probe_'+str(j)+'_Status'	, pstat, 'plug')
-      print('palarm: ',palrm)
-      device.add_binary_sensor('Probe_'+str(j)+'_Alarm'	, palrm, 'heat')
+      device.add_sensor('Probe' + probe_label + 'Temp', probe_t,  'temperature', '°C')
 
-      #Set temps unless 0xFFFF - then set 'unavailable'
-      if pt==0xFFFF 
-        pt='unavailable' 
+      var probe_set = data.get(offset + 12, -2)
+      if probe_set == 0xFFFF 
+        probe_set = 'unavailable' 
       else
-        pt=pt/100
+        probe_set = probe_set/100.0
       end
-      print('pt: ',pt)
-      device.add_sensor('Probe_'+str(j)+'_Temp', pt,  'temperature', '°C')
-      print('gvh5184-6')
-      
-      if pset==0xFFFF 
-        pset='unavailable' 
-      else
-        pset=pset/100
-      end
-      print('pset: ',pset)
-      device.add_sensor('Probe_'+str(j)+'_Target', pset,  'temperature', '°C')
-      print('gvh5184-7')
-
+      device.add_sensor('Probe' + probe_label + 'Target', probe_set,  'temperature', '°C')
     end
     return true
-    print('gvh5184-8')
   else
     return false
   end
